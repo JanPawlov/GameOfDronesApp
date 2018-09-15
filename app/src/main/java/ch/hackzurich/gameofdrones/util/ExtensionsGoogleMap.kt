@@ -57,17 +57,21 @@ fun GoogleMap.setMarker(latLng: LatLng, iconBitmap: Bitmap, data: AircraftData):
     return AircraftMarkerPosition(data,
             addMarker(MarkerOptions()
                     .position(latLng)
-                    .icon(BitmapDescriptorFactory.fromBitmap(iconBitmap))), iconBitmap)
+                    .title(data.icao)
+                    .snippet("Height: ${data.alt} Speed: ${data.speed}")
+                    .icon(BitmapDescriptorFactory.fromBitmap(iconBitmap))))
 }
 
 fun getPlaneBmp(context: Context, aircraftData: AircraftData): Bitmap {
-    val drawable = ContextCompat.getDrawable(context, R.drawable.ic_plane)
+    val drawable = ContextCompat.getDrawable(context, if (aircraftData.icao.startsWith("F")) R.drawable.ic_drone else R.drawable.ic_plane)
     val canvas = Canvas()
     var bitmap = Bitmap.createBitmap(drawable!!.intrinsicWidth, drawable.intrinsicHeight, Bitmap.Config.ARGB_8888)
 
-    val scale = aircraftData.alt!! / 10000.0.toFloat()
+    var scale = aircraftData.alt!! / 10000.0.toFloat()
     val width = bitmap.width
     val height = bitmap.height
+    if (scale < 0.2f)
+        scale = 0.2f
     if (scale > 0)
         bitmap = Bitmap.createScaledBitmap(bitmap, Math.round(width * scale), Math.round(height * scale), false)
 
@@ -82,6 +86,7 @@ fun getPlaneBmp(context: Context, aircraftData: AircraftData): Bitmap {
 
 fun GoogleMap.changeMarker(aircraft: AircraftMarkerPosition, end: LatLng, context: Context) {
     aircraft.marker.position = end
+    aircraft.marker.snippet = "Height: ${aircraft.data.alt} Speed: ${aircraft.data.speed}"
     aircraft.marker.setIcon(BitmapDescriptorFactory.fromBitmap(getPlaneBmp(context, aircraft.data)))
 }
 

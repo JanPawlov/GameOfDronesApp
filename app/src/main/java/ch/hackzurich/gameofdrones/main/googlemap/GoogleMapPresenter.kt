@@ -3,10 +3,10 @@ package ch.hackzurich.gameofdrones.main.googlemap
 import android.annotation.SuppressLint
 import android.content.Context
 import android.graphics.Bitmap
-import android.graphics.Rect
 import android.os.Bundle
-import ch.hackzurich.gameofdrones.Aircraft
+import android.util.Log
 import ch.hackzurich.gameofdrones.AircraftData
+import ch.hackzurich.gameofdrones.AircraftDataResponse
 import ch.hackzurich.gameofdrones.AircraftMarkerPosition
 import ch.hackzurich.gameofdrones.MainApp
 import ch.hackzurich.gameofdrones.util.*
@@ -14,8 +14,12 @@ import com.google.android.gms.maps.GoogleMap
 import com.google.android.gms.maps.MapView
 import com.google.android.gms.maps.MapsInitializer
 import com.google.android.gms.maps.model.*
+import com.google.gson.Gson
+import com.google.gson.JsonSyntaxException
 import io.reactivex.schedulers.Schedulers
 import io.reactivex.subjects.PublishSubject
+import okhttp3.*
+import okio.ByteString
 import java.util.*
 
 
@@ -23,10 +27,12 @@ class GoogleMapPresenter : GoogleMapBP(), GoogleMapP {
 
     private var googleMap: GoogleMap? = null
 
+    private val client = OkHttpClient()
+
     private val aircraftDataPublishSubject: PublishSubject<AircraftData> = PublishSubject.create()
 
     private val fetchTimer: Timer = Timer()
-    private val FETCH_DELAY: Long = 2000
+    private val FETCH_DELAY: Long = 1000
 
     init {
         MainApp.appComponent.inject(this)
@@ -46,7 +52,9 @@ class GoogleMapPresenter : GoogleMapBP(), GoogleMapP {
             googleMap = mMap
             mView?.let {
                 googleMap!!.isMyLocationEnabled = true
+                //googleMap!!.setMapStyle(MapStyleOptions.loadRawResourceStyle(mView?.getContext()!!,R.raw.map_style))
                 mView?.onMapViewReady(googleMap!!)
+                //start()
                 startFetchingAircraftData()
             }
         }
@@ -59,7 +67,7 @@ class GoogleMapPresenter : GoogleMapBP(), GoogleMapP {
     fun getAircraftData() {
         mApi.getAircraftData().subscribeOn(Schedulers.io()).observeOn(Schedulers.io())
                 .subscribe({
-                    it.body()?.data?.forEach { aircraftDataPublishSubject.onNext(it) }
+                    it.body()?.data?.shuffled()?.subList(0, it.body()!!.data.size / 2)?.forEach { aircraftDataPublishSubject.onNext(it) }
                 }, {
                     it.printStackTrace()
                 })
@@ -71,17 +79,12 @@ class GoogleMapPresenter : GoogleMapBP(), GoogleMapP {
                 getAircraftData()
             }
         }, 0, FETCH_DELAY)
+        mView?.startClearingLoop()
+        mView?.startDroneMovement()
     }
 
     override fun getAircraftDataPublisher(): PublishSubject<AircraftData> {
         return aircraftDataPublishSubject
-    }
-
-    private fun setGooglePadding(googleMapPadding: GoogleMapPadding?) {
-        googleMapPadding?.let {
-            val rect: Rect = googleMapPadding.rectPadding
-            googleMap!!.setPadding(rect.left, rect.top, rect.right, rect.bottom)
-        }
     }
 
     override fun setMarker(latLng: LatLng, iconBitmap: Bitmap, data: AircraftData): AircraftMarkerPosition {
@@ -92,6 +95,18 @@ class GoogleMapPresenter : GoogleMapBP(), GoogleMapP {
         googleMap!!.setOnMarkerDragListener(onMarkerDragListener)
     }
 
+    override fun moveDrone(marker: Marker, deltaLat: Double, deltaLong: Double) {
+        marker.position = LatLng(marker.position.latitude + deltaLat, marker.position.longitude + deltaLong)
+        mApi.postDronePosition(AircraftData.setDrone(marker.position, "F2137", mView?.getSimpleDateFormat()!!))
+                .subscribeOn(Schedulers.io())
+                .observeOn(Schedulers.io())
+                .subscribe({
+                    Log.e("Sending drone position", it.isSuccessful.toString())
+                }, {
+                    it.printStackTrace()
+                    Log.e("Sending drone position", "Error")
+                })
+    }
 
     override fun animateMarker(aircraft: AircraftMarkerPosition, end: LatLng) {
         googleMap!!.changeMarker(aircraft, end, mView?.getContext()!!)
@@ -129,5 +144,53 @@ class GoogleMapPresenter : GoogleMapBP(), GoogleMapP {
         googleMap?.clear()
     }
 
+    override fun start() {
+        Log.e("AirWebSocketListener", "Start")
+        val request = Request.Builder().url("ws://hackzurich.involi.live/ws").build()
+        val listener = AircraftWebSocketListener()
+        val ws = client?.newWebSocket(request, listener)
 
+        client?.dispatcher()?.executorService()?.shutdown()
+        mView?.startClearingLoop()
+        mView?.startDroneMovement()
+    }
+
+    inner class AircraftWebSocketListener : WebSocketListener() {
+        override fun onOpen(webSocket: WebSocket, response: Response) {
+            super.onOpen(webSocket, response)
+            Log.e("AirWebSocketListener", "OnOpen")
+        }
+
+        override fun onFailure(webSocket: WebSocket, t: Throwable, response: Response?) {
+            super.onFailure(webSocket, t, response)
+            Log.e("AirWebSocketListener", "Failure")
+        }
+
+        override fun onClosing(webSocket: WebSocket, code: Int, reason: String) {
+            super.onClosing(webSocket, code, reason)
+            Log.e("AirWebSocketListener", "Closing")
+        }
+
+        override fun onMessage(webSocket: WebSocket, text: String) {
+            super.onMessage(webSocket, text)
+            try {
+                val resp = Gson().fromJson<AircraftDataResponse>(text, AircraftDataResponse::class.java)
+                resp.data.forEach {
+                    aircraftDataPublishSubject.onNext(it)
+                }
+            } catch (e: JsonSyntaxException) {
+                e.printStackTrace()
+            }
+        }
+
+        override fun onMessage(webSocket: WebSocket, bytes: ByteString) {
+            super.onMessage(webSocket, bytes)
+            Log.e("AirWebSocketListener", bytes.utf8())
+        }
+
+        override fun onClosed(webSocket: WebSocket, code: Int, reason: String) {
+            super.onClosed(webSocket, code, reason)
+            Log.e("AirWebSocketListener", "onClosed")
+        }
+    }
 }

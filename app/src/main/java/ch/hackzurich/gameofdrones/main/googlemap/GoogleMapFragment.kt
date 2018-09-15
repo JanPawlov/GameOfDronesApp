@@ -1,16 +1,15 @@
 package ch.hackzurich.gameofdrones.main.googlemap
 
-import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.os.Bundle
 import android.support.v4.content.ContextCompat
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import ch.hackzurich.gameofdrones.AircraftData
 import ch.hackzurich.gameofdrones.AircraftMarkerPosition
-import ch.hackzurich.gameofdrones.MainApp
 import ch.hackzurich.gameofdrones.R
 import ch.hackzurich.gameofdrones.util.GoogleMapBF
 import ch.hackzurich.gameofdrones.util.GoogleMapP
@@ -19,10 +18,15 @@ import com.google.android.gms.maps.GoogleMap
 import com.google.android.gms.maps.model.Circle
 import com.google.android.gms.maps.model.CircleOptions
 import com.google.android.gms.maps.model.LatLng
-import com.google.android.gms.maps.model.Polyline
+import com.google.android.gms.maps.model.Marker
 import io.reactivex.Observer
 import io.reactivex.disposables.Disposable
 import kotlinx.android.synthetic.main.fragment_google_map.*
+import java.sql.Time
+import java.text.ParseException
+import java.text.SimpleDateFormat
+import java.util.*
+import java.util.concurrent.ConcurrentHashMap
 
 
 class GoogleMapFragment : GoogleMapBF(), GoogleMapV {
@@ -35,7 +39,7 @@ class GoogleMapFragment : GoogleMapBF(), GoogleMapV {
 
     val aircraftObserver = AircraftDataObserver()
 
-    val aircraftsHashMap = HashMap<String, AircraftMarkerPosition>()
+    val aircraftsHashMap = ConcurrentHashMap<String, AircraftMarkerPosition>()
 
     val planeBmp: Bitmap by lazy {
         val drawable = ContextCompat.getDrawable(context!!, R.drawable.ic_plane)
@@ -62,6 +66,8 @@ class GoogleMapFragment : GoogleMapBF(), GoogleMapV {
     override fun getDroneBitmap() = droneBmp
     override fun getPlaneBitmap() = planeBmp
 
+    val sdf = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSSSSXXX", Locale.getDefault())
+
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
         return inflater.inflate(R.layout.fragment_google_map, container, false)
     }
@@ -80,6 +86,89 @@ class GoogleMapFragment : GoogleMapBF(), GoogleMapV {
         } else {
             setCameraPosition(lastPosition)
         }
+    }
+
+    val timer: Timer = Timer()
+    val clearDelay: Long = 1000
+
+    val droneStartLocation = LatLng(47.451796, 8.532610)
+    val droneEndLocation = LatLng(47.465436, 8.596335)
+
+    val droneSpeed = (50 / 3) //m/s
+    val droneMovementTime = 294
+    val dronePositionRefresh = 2
+
+    val latDelta = (droneEndLocation.latitude - droneStartLocation.latitude) / droneMovementTime
+    val lngDelta = (droneEndLocation.longitude - droneStartLocation.longitude) / droneMovementTime
+
+    val droneMoveTimer: Timer = Timer()
+    var droneCounter: Long = 0
+
+    var droneMarker: Marker? = null
+
+    override fun getSimpleDateFormat(): SimpleDateFormat = sdf
+
+    override fun startDroneMovement() {
+        droneMoveTimer.schedule(object : TimerTask() {
+            override fun run() {
+                droneMarker?.let {
+                    if ((droneCounter % droneMovementTime).toInt() != 0) { //drone has reached its destination
+                        if ((droneCounter / droneMovementTime).toInt() % 2 == 1) { //drone is retrning
+                            google_map_view.post {
+                                mPresenter.moveDrone(it, -latDelta * dronePositionRefresh, -lngDelta * dronePositionRefresh)
+                            }
+                        } else {
+                            google_map_view.post {
+                                mPresenter.moveDrone(it, latDelta * dronePositionRefresh, lngDelta * dronePositionRefresh)
+                            }
+                        }
+                    }
+                } ?: kotlin.run {
+                    //initial move
+                    google_map_view.post {
+                        droneMarker = mPresenter.setMarker(droneStartLocation, droneBmp, AircraftData.setDrone(droneStartLocation, "F2137", sdf)).marker
+                    }
+                }
+                droneCounter += dronePositionRefresh
+            }
+        }, 0, 2000)
+
+    }
+
+    override fun startClearingLoop() {
+        timer.schedule(object : TimerTask() {
+            override fun run() {
+                Log.e(this::class.java.name, "Starting clearing loop")
+                val enumerator = aircraftsHashMap.keys()
+                while (enumerator.hasMoreElements()) {
+                    val key = enumerator.nextElement()
+                    val aircraft = aircraftsHashMap[key]
+                    aircraft?.data?.last_update?.let {
+                        try {
+                            val date = sdf.parse(it).time
+                            val now = Calendar.getInstance(TimeZone.getDefault()).time.time
+                            if (Math.abs(now - date) > 120000) {
+                                val pos = aircraftsHashMap[key]
+                                google_map_view.post {
+                                    pos?.marker?.remove()
+                                }
+                                aircraftsHashMap.remove(key)
+                                Log.e(this::class.java.name, "removing old marker")
+                            }
+                        } catch (e: ParseException) {
+                            e.printStackTrace()
+                        }
+                    } ?: kotlin.run {
+                        val pos = aircraftsHashMap[key]
+                        google_map_view.post {
+                            pos?.marker?.remove()
+                        }
+                        aircraftsHashMap.remove(key)
+                        Log.e(this::class.java.name, "removing old marker")
+                    }
+                }
+            }
+        }, clearDelay, clearDelay * 60)
     }
 
     fun clear() {
@@ -127,7 +216,7 @@ class GoogleMapFragment : GoogleMapBF(), GoogleMapV {
 
     override fun onDestroy() {
         aircraftDisposable?.dispose()
-        google_map_view.onDestroy()
+        google_map_view?.onDestroy()
         super.onDestroy()
     }
 
@@ -161,9 +250,11 @@ class GoogleMapFragment : GoogleMapBF(), GoogleMapV {
         override fun onNext(t: AircraftData) {
             if (aircraftsHashMap.containsKey(t.icao)) {
                 val currentMarker = aircraftsHashMap[t.icao]
+
                 google_map_view.post {
                     animateMarker(currentMarker!!, LatLng(t.lat, t.lon))
                 }
+                aircraftsHashMap[t.icao]?.data = t
             } else {
                 val bmp = if (t.icao.startsWith("F")) getDroneBitmap() else getPlaneBitmap()
                 google_map_view.post {

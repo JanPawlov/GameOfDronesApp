@@ -38,6 +38,10 @@ class MainActivity : MainBA(), MainV {
         //empty
     }
 
+    override fun onBackPressed() {
+        //super.onBackPressed()
+    }
+
     override fun getContext(): Context? {
         return baseContext
     }

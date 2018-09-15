@@ -19,7 +19,7 @@ class DronesModule {
     @Singleton
     fun getDronesAPI(): DronesAPI {
 
-        val baseUrl = "https://hackzurich.involi.live" //"http://godbackend.scapp.io"
+        val baseUrl = "http://godbackend.scapp.io"//"https://hackzurich.involi.live"
 
         val logging = HttpLoggingInterceptor().also {
             it.level = HttpLoggingInterceptor.Level.BODY
