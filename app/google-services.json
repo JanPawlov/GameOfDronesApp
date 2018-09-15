@@ -1,0 +1,101 @@
+{
+  "project_info": {
+    "project_number": "860060182447",
+    "firebase_url": "https://platewithmate.firebaseio.com",
+    "project_id": "platewithmate",
+    "storage_bucket": "platewithmate.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:860060182447:android:119b4cb0b711e40f",
+        "android_client_info": {
+          "package_name": "ch.hackzurich.gameofdrones"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "860060182447-avcil7v926av1j5oou8hbcjbhq2oa7o4.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDnuIf1I7mNhjb4aJe1BOtmiqDpD00w6oU"
+        }
+      ],
+      "services": {
+        "analytics_service": {
+          "status": 1
+        },
+        "appinvite_service": {
+          "status": 1,
+          "other_platform_oauth_client": []
+        },
+        "ads_service": {
+          "status": 2
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:860060182447:android:06a10fc0e0000240",
+        "android_client_info": {
+          "package_name": "pl.applover.plate"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "860060182447-h9s761t9candc5jteji17eie5r6q7sfq.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "pl.applover.plate",
+            "certificate_hash": "ff66da08345322246e72a95b36cb9f00b3f50054"
+          }
+        },
+        {
+          "client_id": "860060182447-johovgcpee5nafh40lpcjvvi271mpple.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "pl.applover.plate",
+            "certificate_hash": "8a7b160de0dff9b8dca3157219b1b52de6351c21"
+          }
+        },
+        {
+          "client_id": "860060182447-avcil7v926av1j5oou8hbcjbhq2oa7o4.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDnuIf1I7mNhjb4aJe1BOtmiqDpD00w6oU"
+        }
+      ],
+      "services": {
+        "analytics_service": {
+          "status": 1
+        },
+        "appinvite_service": {
+          "status": 2,
+          "other_platform_oauth_client": [
+            {
+              "client_id": "860060182447-avcil7v926av1j5oou8hbcjbhq2oa7o4.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "860060182447-0d56482lhh16cng9nto6di1dld3kfksd.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "pl.applover.platewithmateapp"
+              }
+            }
+          ]
+        },
+        "ads_service": {
+          "status": 2
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
