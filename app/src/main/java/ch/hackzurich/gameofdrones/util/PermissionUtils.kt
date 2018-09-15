@@ -1,9 +1,8 @@
-package ch.hackzurich.gameofdrones
+package ch.hackzurich.gameofdrones.util
 
 import android.Manifest
 import android.app.Activity
 import android.content.pm.PackageManager
-import android.support.v4.app.ActivityCompat
 import android.support.v4.app.ActivityCompat.*
 
 

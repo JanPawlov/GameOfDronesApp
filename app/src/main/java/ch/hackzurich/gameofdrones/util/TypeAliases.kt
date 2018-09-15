@@ -1,4 +1,4 @@
-package ch.hackzurich.gameofdrones
+package ch.hackzurich.gameofdrones.util
 
 import ch.hackzurich.gameofdrones.main.MainContract
 import ch.hackzurich.gameofdrones.main.googlemap.GoogleMapContract
@@ -18,4 +18,4 @@ typealias MainBA = BaseActivity<MainV, MainP>
 typealias GoogleMapV = GoogleMapContract.View
 typealias GoogleMapP = GoogleMapContract.Presenter
 typealias GoogleMapBF = BaseFragment<GoogleMapV, GoogleMapP>
-typealias GoogleMapBP = BasePresenter<GoogleMapV>
+typealias GoogleMapBP = BaseApiPresenter<GoogleMapV>

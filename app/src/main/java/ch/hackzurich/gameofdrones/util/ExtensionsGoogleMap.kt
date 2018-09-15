@@ -1,11 +1,20 @@
-package ch.hackzurich.gameofdrones
+package ch.hackzurich.gameofdrones.util
 
 import android.animation.ValueAnimator
 import android.content.Context
+import android.graphics.Bitmap
+import android.graphics.Canvas
+import android.graphics.Matrix
 import android.support.v4.content.ContextCompat
+import android.support.v7.widget.DrawableUtils
+import ch.hackzurich.gameofdrones.AircraftData
+import ch.hackzurich.gameofdrones.AircraftMarkerPosition
+import ch.hackzurich.gameofdrones.MainApp
+import ch.hackzurich.gameofdrones.R
 import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.GoogleMap
 import com.google.android.gms.maps.model.*
+import pl.applover.kotlinmvp.rotate
 import java.lang.Exception
 
 fun GoogleMap.setCameraPosition(latLng: LatLng, animateCamera: Boolean = false) {
@@ -42,41 +51,38 @@ fun GoogleMap.setCameraPosition(latLngs: ArrayList<LatLng>, animateCamera: Boole
     } catch (e: Exception) {
 
     }
-
 }
 
-fun GoogleMap.setMarker(latLng: LatLng, iconResId: Int? = null, title: String? = null, snippet: String? = null): Marker {
-    return when {
-        iconResId != null -> {
+fun GoogleMap.setMarker(latLng: LatLng, iconBitmap: Bitmap, data: AircraftData): AircraftMarkerPosition {
+    return AircraftMarkerPosition(data,
             addMarker(MarkerOptions()
                     .position(latLng)
-                    .title(title)
-                    .snippet(snippet)
-                    .icon(BitmapDescriptorFactory.fromResource(iconResId)))
-        }
-        else -> {
-            addMarker(MarkerOptions()
-                    .position(latLng)
-                    .title(title)
-                    .snippet(snippet))
-        }
-    }
+                    .icon(BitmapDescriptorFactory.fromBitmap(iconBitmap))), iconBitmap)
 }
 
-fun GoogleMap.animateMarker(marker: Marker?, end: LatLng) {
-    marker?.let {
-        val startLon = marker.position.longitude
-        val startLat = marker.position.latitude
-        val deltaLon = end.longitude - startLon
-        val deltaLat = end.latitude - startLat
-        val anim = ValueAnimator.ofFloat(0f, 100f).setDuration(500)
-        anim.addUpdateListener {
-            var position = LatLng(it.animatedFraction * deltaLat + startLat, it.animatedFraction * deltaLon + startLon)
-            marker.remove()
-            setMarker(position)
-        }
-        anim.start()
-    }
+fun getPlaneBmp(context: Context, aircraftData: AircraftData): Bitmap {
+    val drawable = ContextCompat.getDrawable(context, R.drawable.ic_plane)
+    val canvas = Canvas()
+    var bitmap = Bitmap.createBitmap(drawable!!.intrinsicWidth, drawable.intrinsicHeight, Bitmap.Config.ARGB_8888)
+
+    val scale = aircraftData.alt!! / 10000.0.toFloat()
+    val width = bitmap.width
+    val height = bitmap.height
+    if (scale > 0)
+        bitmap = Bitmap.createScaledBitmap(bitmap, Math.round(width * scale), Math.round(height * scale), false)
+
+    canvas.setBitmap(bitmap)
+    drawable.setBounds(0, 0, bitmap.width, bitmap.height)
+    drawable.draw(canvas)
+    val matrix = Matrix()
+    matrix.setRotate(aircraftData.heading?.toFloat()!!)
+    bitmap = Bitmap.createBitmap(bitmap, 0, 0, bitmap.width, bitmap.height, matrix, false)
+    return bitmap
+}
+
+fun GoogleMap.changeMarker(aircraft: AircraftMarkerPosition, end: LatLng, context: Context) {
+    aircraft.marker.position = end
+    aircraft.marker.setIcon(BitmapDescriptorFactory.fromBitmap(getPlaneBmp(context, aircraft.data)))
 }
 
 fun GoogleMap.setRangeCircle(circleOptions: CircleOptions): Circle {

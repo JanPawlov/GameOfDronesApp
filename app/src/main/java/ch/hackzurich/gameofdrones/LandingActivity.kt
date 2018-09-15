@@ -4,6 +4,8 @@ import android.app.Activity
 import android.content.Intent
 import android.os.Bundle
 import ch.hackzurich.gameofdrones.main.MainActivity
+import ch.hackzurich.gameofdrones.util.checkPermissionGPS
+import ch.hackzurich.gameofdrones.util.checkPermissionGPSAndRequestIfNotGranted
 
 /**
  * Created by janpawlov ( ͡° ͜ʖ ͡°) on 15/09/2018.

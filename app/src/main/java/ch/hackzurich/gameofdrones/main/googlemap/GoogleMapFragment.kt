@@ -1,14 +1,29 @@
 package ch.hackzurich.gameofdrones.main.googlemap
 
 import android.content.Context
+import android.graphics.Bitmap
+import android.graphics.Canvas
 import android.os.Bundle
+import android.support.v4.content.ContextCompat
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import ch.hackzurich.gameofdrones.*
+import ch.hackzurich.gameofdrones.AircraftData
+import ch.hackzurich.gameofdrones.AircraftMarkerPosition
+import ch.hackzurich.gameofdrones.MainApp
+import ch.hackzurich.gameofdrones.R
+import ch.hackzurich.gameofdrones.util.GoogleMapBF
+import ch.hackzurich.gameofdrones.util.GoogleMapP
+import ch.hackzurich.gameofdrones.util.GoogleMapV
 import com.google.android.gms.maps.GoogleMap
-import com.google.android.gms.maps.model.*
+import com.google.android.gms.maps.model.Circle
+import com.google.android.gms.maps.model.CircleOptions
+import com.google.android.gms.maps.model.LatLng
+import com.google.android.gms.maps.model.Polyline
+import io.reactivex.Observer
+import io.reactivex.disposables.Disposable
 import kotlinx.android.synthetic.main.fragment_google_map.*
+
 
 class GoogleMapFragment : GoogleMapBF(), GoogleMapV {
     override var mPresenter: GoogleMapP = GoogleMapPresenter()
@@ -16,15 +31,46 @@ class GoogleMapFragment : GoogleMapBF(), GoogleMapV {
     private var mOnMapViewReadyListener: OnMapViewReadyListener? = null
     val googleMapPadding: GoogleMapPadding? by lazy { arguments?.getParcelable<GoogleMapPadding>("googleMapPadding") }
 
+    var aircraftDisposable: Disposable? = null
+
+    val aircraftObserver = AircraftDataObserver()
+
+    val aircraftsHashMap = HashMap<String, AircraftMarkerPosition>()
+
+    val planeBmp: Bitmap by lazy {
+        val drawable = ContextCompat.getDrawable(context!!, R.drawable.ic_plane)
+        val canvas = Canvas()
+        val bitmap = Bitmap.createBitmap(drawable!!.intrinsicWidth, drawable.intrinsicHeight, Bitmap.Config.ARGB_8888)
+        canvas.setBitmap(bitmap)
+        drawable.setBounds(0, 0, drawable.intrinsicWidth, drawable.intrinsicHeight)
+        drawable.draw(canvas)
+
+        bitmap
+    }
+
+    val droneBmp: Bitmap by lazy {
+        val drawable = ContextCompat.getDrawable(context!!, R.drawable.ic_drone)
+        val canvas = Canvas()
+        val bitmap = Bitmap.createBitmap(drawable!!.intrinsicWidth, drawable.intrinsicHeight, Bitmap.Config.ARGB_8888)
+        canvas.setBitmap(bitmap)
+        drawable.setBounds(0, 0, drawable.intrinsicWidth, drawable.intrinsicHeight)
+        drawable.draw(canvas)
+
+        bitmap
+    }
+
+    override fun getDroneBitmap() = droneBmp
+    override fun getPlaneBitmap() = planeBmp
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
-        val root = inflater.inflate(R.layout.fragment_google_map, container, false)
-        return root
+        return inflater.inflate(R.layout.fragment_google_map, container, false)
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         mPresenter.initializeMap(savedInstanceState, google_map_view, googleMapPadding)
+        mPresenter.getAircraftDataPublisher().subscribeWith(aircraftObserver)
+
     }
 
     fun setCameraAtLastPositionIfNullGivenLatLng(latLng: LatLng) {
@@ -40,12 +86,12 @@ class GoogleMapFragment : GoogleMapBF(), GoogleMapV {
         mPresenter.clear()
     }
 
-    fun setMarker(latLng: LatLng, iconResId: Int? = null, title: String? = null, snippet: String? = null): Marker {
-        return mPresenter.setMarker(latLng, iconResId, title, snippet)
+    fun setMarker(latLng: LatLng, iconBitmap: Bitmap, data: AircraftData): AircraftMarkerPosition {
+        return mPresenter.setMarker(latLng, iconBitmap, data)
     }
 
-    fun animateMarker(marker: Marker?, end: LatLng) {
-        mPresenter.animateMarker(marker, end)
+    fun animateMarker(aircraft: AircraftMarkerPosition, end: LatLng) {
+        mPresenter.animateMarker(aircraft, end)
     }
 
 
@@ -65,10 +111,6 @@ class GoogleMapFragment : GoogleMapBF(), GoogleMapV {
         return mPresenter.setRangeCircle(circleOptions)
     }
 
-    fun drawRoute(latLngs: ArrayList<LatLng>, colorRid: Int = android.R.color.holo_orange_light, width: Float = 8f, context: Context = MainApp.instance): Polyline {
-        return mPresenter.drawRoute(latLngs, colorRid, width, context)
-    }
-
     fun setCameraListener(listener: GoogleMap.OnCameraMoveListener?) {
         mPresenter.setCameraListener(listener)
     }
@@ -84,6 +126,7 @@ class GoogleMapFragment : GoogleMapBF(), GoogleMapV {
     }
 
     override fun onDestroy() {
+        aircraftDisposable?.dispose()
         google_map_view.onDestroy()
         super.onDestroy()
     }
@@ -103,6 +146,36 @@ class GoogleMapFragment : GoogleMapBF(), GoogleMapV {
 
     override fun onMapViewReady(googleMap: GoogleMap) {
         mOnMapViewReadyListener?.onMapViewReady(googleMap)
+    }
+
+
+    inner class AircraftDataObserver : Observer<AircraftData> {
+        override fun onComplete() {
+            //empty
+        }
+
+        override fun onSubscribe(d: Disposable) {
+            aircraftDisposable = d
+        }
+
+        override fun onNext(t: AircraftData) {
+            if (aircraftsHashMap.containsKey(t.icao)) {
+                val currentMarker = aircraftsHashMap[t.icao]
+                google_map_view.post {
+                    animateMarker(currentMarker!!, LatLng(t.lat, t.lon))
+                }
+            } else {
+                val bmp = if (t.icao.startsWith("F")) getDroneBitmap() else getPlaneBitmap()
+                google_map_view.post {
+                    val aircraft = setMarker(LatLng(t.lat, t.lon), bmp, t)
+                    aircraftsHashMap[t.icao] = aircraft
+                }
+            }
+        }
+
+        override fun onError(e: Throwable) {
+            //empty
+        }
     }
 
     interface OnMapViewReadyListener {

@@ -6,6 +6,9 @@ import android.os.Bundle
 import android.support.v4.app.Fragment
 import ch.hackzurich.gameofdrones.*
 import ch.hackzurich.gameofdrones.main.googlemap.GoogleMapFragment
+import ch.hackzurich.gameofdrones.util.MainBA
+import ch.hackzurich.gameofdrones.util.MainP
+import ch.hackzurich.gameofdrones.util.MainV
 
 /**
  * Created by janpawlov ( ͡° ͜ʖ ͡°) on 15/09/2018.

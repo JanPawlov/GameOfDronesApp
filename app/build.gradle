@@ -3,6 +3,7 @@ apply plugin: 'com.android.application'
 apply plugin: 'kotlin-android'
 
 apply plugin: 'kotlin-android-extensions'
+apply plugin: 'kotlin-kapt'
 
 android {
     compileSdkVersion 28
@@ -12,6 +13,7 @@ android {
         targetSdkVersion 28
         versionCode 1
         versionName "1.0"
+        multiDexEnabled true
         testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
     }
     buildTypes {
@@ -26,11 +28,32 @@ dependencies {
     implementation fileTree(dir: 'libs', include: ['*.jar'])
     implementation"org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlin_version"
     implementation 'com.android.support:appcompat-v7:28.0.0-rc02'
-
+    implementation 'com.android.support:multidex:1.0.3'
     implementation('com.github.ApploverSoftware:KotlinMVP:1.0.9') {
         exclude group: 'com.android.support'
     }
     implementation "com.google.android.gms:play-services-maps:15.0.1"
+    //RXJAVA
+    implementation "io.reactivex.rxjava2:rxandroid:$rootProject.ext.rxAndroid"
+    implementation "io.reactivex.rxjava2:rxkotlin:$rootProject.ext.rxKotlin"
+    implementation "com.jakewharton.rxbinding2:rxbinding-kotlin:$rootProject.ext.rxBinding"
+
+    //DAGGER
+    implementation "com.google.dagger:dagger:$rootProject.ext.daggerInjection"
+    kapt "com.google.dagger:dagger-compiler:$rootProject.ext.daggerInjection"
+    implementation "com.google.dagger:dagger-android:$rootProject.ext.daggerInjection"
+    kapt "com.google.dagger:dagger-android-processor:$rootProject.ext.daggerInjection"
+    implementation "com.google.dagger:dagger-android-support:$rootProject.ext.daggerInjection"
+    kapt "com.google.dagger:dagger-android-support:$rootProject.ext.daggerInjection"
+
+    implementation 'com.squareup.okhttp3:okhttp:3.11.0'
+    implementation 'com.squareup.okhttp3:logging-interceptor:3.11.0'
+    implementation 'com.squareup.retrofit2:retrofit:2.4.0'
+    implementation 'com.squareup.retrofit2:adapter-rxjava2:2.4.0'
+    implementation 'com.squareup.retrofit2:converter-gson:2.4.0'
+    implementation 'io.reactivex.rxjava2:rxandroid:2.1.0'
+    implementation 'io.reactivex.rxjava2:rxkotlin:2.2.0'
+
     testImplementation 'junit:junit:4.12'
     androidTestImplementation 'com.android.support.test:runner:1.0.2'
     androidTestImplementation 'com.android.support.test.espresso:espresso-core:3.0.2'

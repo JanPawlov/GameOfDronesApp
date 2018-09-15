@@ -7,6 +7,10 @@ import android.location.Location
 import android.location.LocationListener
 import android.location.LocationManager
 import android.os.Bundle
+import ch.hackzurich.gameofdrones.api.AppComponent
+import ch.hackzurich.gameofdrones.api.DaggerAppComponent
+import ch.hackzurich.gameofdrones.api.DronesModule
+import ch.hackzurich.gameofdrones.util.DelegatesExt
 
 /**
  * Created by janpawlov ( ͡° ͜ʖ ͡°) on 15/09/2018.
@@ -24,6 +28,7 @@ class MainApp : Application(), LocationListener {
 
     companion object {
         var instance: MainApp by DelegatesExt.notNullSingleValue()
+        val appComponent: AppComponent = DaggerAppComponent.create()
 
         private var locationManager: LocationManager by DelegatesExt.notNullSingleValue()
     }

@@ -1,4 +1,4 @@
-package ch.hackzurich.gameofdrones
+package ch.hackzurich.gameofdrones.util
 
 import kotlin.reflect.KProperty
 

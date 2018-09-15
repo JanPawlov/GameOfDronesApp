@@ -26,3 +26,9 @@ allprojects {
 task clean(type: Delete) {
     delete rootProject.buildDir
 }
+ext {
+    rxAndroid = "2.1.0"
+    rxKotlin = "2.1.0"
+    rxBinding = "2.1.1"
+    daggerInjection = "2.16"
+}
