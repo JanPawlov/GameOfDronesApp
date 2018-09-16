@@ -2,15 +2,17 @@ package ch.hackzurich.gameofdrones.main.googlemap
 
 import android.graphics.Bitmap
 import android.graphics.Canvas
+import android.location.Location
 import android.os.Bundle
 import android.support.v4.content.ContextCompat
 import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import ch.hackzurich.gameofdrones.AircraftData
-import ch.hackzurich.gameofdrones.AircraftMarkerPosition
+import ch.hackzurich.gameofdrones.model.AircraftData
+import ch.hackzurich.gameofdrones.model.AircraftMarkerPosition
 import ch.hackzurich.gameofdrones.R
+import ch.hackzurich.gameofdrones.model.Drone
 import ch.hackzurich.gameofdrones.util.GoogleMapBF
 import ch.hackzurich.gameofdrones.util.GoogleMapP
 import ch.hackzurich.gameofdrones.util.GoogleMapV
@@ -19,14 +21,15 @@ import com.google.android.gms.maps.model.Circle
 import com.google.android.gms.maps.model.CircleOptions
 import com.google.android.gms.maps.model.LatLng
 import com.google.android.gms.maps.model.Marker
+import com.google.maps.android.SphericalUtil
 import io.reactivex.Observer
 import io.reactivex.disposables.Disposable
 import kotlinx.android.synthetic.main.fragment_google_map.*
-import java.sql.Time
 import java.text.ParseException
 import java.text.SimpleDateFormat
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
+import kotlin.collections.ArrayList
 
 
 class GoogleMapFragment : GoogleMapBF(), GoogleMapV {
@@ -115,11 +118,11 @@ class GoogleMapFragment : GoogleMapBF(), GoogleMapV {
                     if ((droneCounter % droneMovementTime).toInt() != 0) { //drone has reached its destination
                         if ((droneCounter / droneMovementTime).toInt() % 2 == 1) { //drone is retrning
                             google_map_view.post {
-                                mPresenter.moveDrone(it, -latDelta * dronePositionRefresh, -lngDelta * dronePositionRefresh)
+                                //mPresenter.moveDrone(it, -latDelta * dronePositionRefresh, -lngDelta * dronePositionRefresh)
                             }
                         } else {
                             google_map_view.post {
-                                mPresenter.moveDrone(it, latDelta * dronePositionRefresh, lngDelta * dronePositionRefresh)
+                                //mPresenter.moveDrone(it, latDelta * dronePositionRefresh, lngDelta * dronePositionRefresh)
                             }
                         }
                     }
@@ -169,11 +172,138 @@ class GoogleMapFragment : GoogleMapBF(), GoogleMapV {
                 }
             }
         }, clearDelay, clearDelay * 60)
+        setupDrones()
     }
 
-    fun clear() {
-        mPresenter.clear()
+    val firstDroneStartLocation = LatLng(47.453149, 8.557557)
+    val firstDroneEndLocation = LatLng(47.462017, 8.558823)
+
+    val secondDroneStartLocation = LatLng(47.458019, 8.551291)
+    val secondDroneEndLocation = LatLng(47.456995, 8.564725)
+
+    val thirdDroneStartLocation = LatLng(47.460711, 8.562884)
+    val thirdDroneEndLocation = LatLng(47.454572, 8.553242)
+
+    val startLocations = arrayListOf(firstDroneStartLocation, secondDroneStartLocation, thirdDroneStartLocation)
+    val endLocations = arrayListOf(firstDroneEndLocation, secondDroneEndLocation, thirdDroneEndLocation)
+
+    val travelTime = 50
+    val travelInterval: Long = 1000
+
+    val firstDroneDeltaLat = firstDroneStartLocation.latitude - firstDroneEndLocation.latitude
+    val firstDroneLatIteration = firstDroneDeltaLat / travelTime
+    val firstDroneDeltaLng = firstDroneStartLocation.longitude - firstDroneEndLocation.longitude
+    val firstDroneLngIteration = firstDroneDeltaLng / travelTime
+
+    val secondDroneDeltaLat = secondDroneStartLocation.latitude - secondDroneEndLocation.latitude
+    val secondDroneLatIteration = secondDroneDeltaLat / travelTime
+    val secondDroneDeltaLng = secondDroneStartLocation.longitude - secondDroneEndLocation.longitude
+    val secondDroneLngIteration = secondDroneDeltaLng / travelTime
+
+    val thirdDroneDeltaLat = thirdDroneStartLocation.latitude - thirdDroneEndLocation.latitude
+    val thirdDroneLatIteration = thirdDroneDeltaLat / travelTime
+    val thirdDroneDeltaLng = thirdDroneStartLocation.longitude - thirdDroneEndLocation.longitude
+    val thirdDroneLngIteration = thirdDroneDeltaLng / travelTime
+
+    val communicator = Communicator()
+    lateinit var mDroneController: DroneController
+
+    fun setupDrones() {
+        val firstDroneMarker = setMarker(firstDroneStartLocation,
+                droneBmp,
+                AircraftData.setDrone(firstDroneStartLocation, "F2137/0", sdf)).marker
+        val secondDroneMarker = setMarker(secondDroneStartLocation,
+                droneBmp,
+                AircraftData.setDrone(secondDroneStartLocation, "F2137/1", sdf)).marker
+        val thirdDroneMarker = setMarker(thirdDroneStartLocation,
+                droneBmp,
+                AircraftData.setDrone(thirdDroneStartLocation, "F2137/2", sdf)).marker
+        val markers = listOf(firstDroneMarker, secondDroneMarker, thirdDroneMarker)
+        val droneNetwork = arrayListOf<Drone>()
+        for (i in 0 until markers.size) {
+            droneNetwork.add(Drone(name = "F2137/$i", marker = markers[i], communicator = communicator, startLatLng = startLocations[i], endLatLng = endLocations[i]))
+        }
+        val iterator = droneNetwork.iterator()
+        while (iterator.hasNext())
+            iterator.next().attachDroneNetwork(droneNetwork)
+        mDroneController = DroneController(droneNetwork, communicator)
+        mDroneController.startDrones()
+
     }
+
+    inner class Communicator : DroneCommunicator {
+
+        @Volatile
+        var firstAcommodated = false
+        @Volatile
+        var secondAcommodated = false
+        @Volatile
+        var thirdAcommodated = false
+
+        override fun updateDrone(drone: Drone, latDelta: Double, lngDelta: Double, altitude: Int) {
+            google_map_view.post {
+                mPresenter.moveDrone(drone, latDelta, lngDelta, altitude)
+            }
+        }
+
+        @Volatile
+        var distance = 0.0
+
+        @Synchronized
+        override fun calculateDistance(droneOne: Drone, droneTwo: Drone): Double {
+            google_map_view.post {
+                distance = SphericalUtil.computeDistanceBetween(droneOne.marker.position, droneTwo.marker.position)
+                Log.e("CalculatedDistance", "Calculated distance between drones: %%%%% $distance %%%%%%")
+            }
+            return distance
+        }
+
+        @Synchronized
+        override fun collisionCourseEnded() {
+            if (firstAcommodated ||
+                    secondAcommodated || thirdAcommodated) {
+                firstAcommodated = false
+                secondAcommodated = false
+                thirdAcommodated = false
+            }
+        }
+
+        @Synchronized
+        override fun adjustHeight(): Int {
+            return if (!firstAcommodated) {
+                firstAcommodated = true
+                10000
+            } else if (!secondAcommodated) {
+                secondAcommodated = true
+                8000
+            } else {
+                thirdAcommodated = true
+                12000
+            }
+        }
+    }
+
+    inner class DroneController(private val drones: ArrayList<Drone>, droneCommunicator: DroneCommunicator) {
+
+        fun startDrones() {
+            for (drone in drones)
+                google_map_view.post {
+                    drone.startDrone()
+                    try {
+                        Thread.sleep(100)
+                    } catch (e: InterruptedException) {
+                    }
+                }
+        }
+    }
+
+    interface DroneCommunicator {
+        fun updateDrone(drone: Drone, latDelta: Double, lngDelta: Double, altitude: Int = 420)
+        fun calculateDistance(droneOne: Drone, droneTwo: Drone): Double
+        fun adjustHeight(): Int
+        fun collisionCourseEnded()
+    }
+
 
     fun setMarker(latLng: LatLng, iconBitmap: Bitmap, data: AircraftData): AircraftMarkerPosition {
         return mPresenter.setMarker(latLng, iconBitmap, data)
@@ -184,7 +314,7 @@ class GoogleMapFragment : GoogleMapBF(), GoogleMapV {
     }
 
 
-    fun setCameraPosition(latLng: LatLng) {
+    private fun setCameraPosition(latLng: LatLng) {
         mPresenter.setCameraPosition(latLng)
     }
 
@@ -220,19 +350,6 @@ class GoogleMapFragment : GoogleMapBF(), GoogleMapV {
         super.onDestroy()
     }
 
-
-    fun setOnMapClickListener(onMapClickListener: GoogleMap.OnMapClickListener) {
-        mPresenter.setOnMapClickListener(onMapClickListener)
-    }
-
-    fun setOnMapViewReadyListener(onMapViewReadyListener: OnMapViewReadyListener) {
-        mOnMapViewReadyListener = onMapViewReadyListener
-    }
-
-    fun setOnMarkerDragListener(onMarkerDragListener: GoogleMap.OnMarkerDragListener) {
-        mPresenter.setOnMarkerDragListener(onMarkerDragListener)
-    }
-
     override fun onMapViewReady(googleMap: GoogleMap) {
         mOnMapViewReadyListener?.onMapViewReady(googleMap)
     }
@@ -248,20 +365,21 @@ class GoogleMapFragment : GoogleMapBF(), GoogleMapV {
         }
 
         override fun onNext(t: AircraftData) {
-            if (aircraftsHashMap.containsKey(t.icao)) {
-                val currentMarker = aircraftsHashMap[t.icao]
+            if (!t.icao.contains("F2137"))
+                if (aircraftsHashMap.containsKey(t.icao)) {
+                    val currentMarker = aircraftsHashMap[t.icao]
 
-                google_map_view.post {
-                    animateMarker(currentMarker!!, LatLng(t.lat, t.lon))
+                    google_map_view.post {
+                        animateMarker(currentMarker!!, LatLng(t.lat, t.lon))
+                    }
+                    aircraftsHashMap[t.icao]?.data = t
+                } else {
+                    val bmp = if (t.icao.startsWith("F")) getDroneBitmap() else getPlaneBitmap()
+                    google_map_view.post {
+                        val aircraft = setMarker(LatLng(t.lat, t.lon), bmp, t)
+                        aircraftsHashMap[t.icao] = aircraft
+                    }
                 }
-                aircraftsHashMap[t.icao]?.data = t
-            } else {
-                val bmp = if (t.icao.startsWith("F")) getDroneBitmap() else getPlaneBitmap()
-                google_map_view.post {
-                    val aircraft = setMarker(LatLng(t.lat, t.lon), bmp, t)
-                    aircraftsHashMap[t.icao] = aircraft
-                }
-            }
         }
 
         override fun onError(e: Throwable) {

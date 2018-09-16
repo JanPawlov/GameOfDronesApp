@@ -1,20 +1,17 @@
 package ch.hackzurich.gameofdrones.util
 
-import android.animation.ValueAnimator
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Matrix
 import android.support.v4.content.ContextCompat
-import android.support.v7.widget.DrawableUtils
-import ch.hackzurich.gameofdrones.AircraftData
-import ch.hackzurich.gameofdrones.AircraftMarkerPosition
+import ch.hackzurich.gameofdrones.model.AircraftData
+import ch.hackzurich.gameofdrones.model.AircraftMarkerPosition
 import ch.hackzurich.gameofdrones.MainApp
 import ch.hackzurich.gameofdrones.R
 import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.GoogleMap
 import com.google.android.gms.maps.model.*
-import pl.applover.kotlinmvp.rotate
 import java.lang.Exception
 
 fun GoogleMap.setCameraPosition(latLng: LatLng, animateCamera: Boolean = false) {

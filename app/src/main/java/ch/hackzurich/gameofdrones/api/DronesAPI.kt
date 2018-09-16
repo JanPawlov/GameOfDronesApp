@@ -1,7 +1,7 @@
 package ch.hackzurich.gameofdrones.api
 
-import ch.hackzurich.gameofdrones.AircraftData
-import ch.hackzurich.gameofdrones.AircraftDataResponse
+import ch.hackzurich.gameofdrones.model.AircraftData
+import ch.hackzurich.gameofdrones.model.AircraftDataResponse
 import io.reactivex.Observable
 import okhttp3.ResponseBody
 import retrofit2.Response

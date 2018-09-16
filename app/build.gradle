@@ -33,6 +33,7 @@ dependencies {
         exclude group: 'com.android.support'
     }
     implementation "com.google.android.gms:play-services-maps:15.0.1"
+    implementation 'com.google.maps.android:android-maps-utils:0.5+'
     //RXJAVA
     implementation "io.reactivex.rxjava2:rxandroid:$rootProject.ext.rxAndroid"
     implementation "io.reactivex.rxjava2:rxkotlin:$rootProject.ext.rxKotlin"

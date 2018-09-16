@@ -5,10 +5,11 @@ import android.content.Context
 import android.graphics.Bitmap
 import android.os.Bundle
 import android.util.Log
-import ch.hackzurich.gameofdrones.AircraftData
-import ch.hackzurich.gameofdrones.AircraftDataResponse
-import ch.hackzurich.gameofdrones.AircraftMarkerPosition
+import ch.hackzurich.gameofdrones.model.AircraftData
+import ch.hackzurich.gameofdrones.model.AircraftDataResponse
+import ch.hackzurich.gameofdrones.model.AircraftMarkerPosition
 import ch.hackzurich.gameofdrones.MainApp
+import ch.hackzurich.gameofdrones.model.Drone
 import ch.hackzurich.gameofdrones.util.*
 import com.google.android.gms.maps.GoogleMap
 import com.google.android.gms.maps.MapView
@@ -21,6 +22,7 @@ import io.reactivex.subjects.PublishSubject
 import okhttp3.*
 import okio.ByteString
 import java.util.*
+import kotlin.collections.ArrayList
 
 
 class GoogleMapPresenter : GoogleMapBP(), GoogleMapP {
@@ -32,7 +34,7 @@ class GoogleMapPresenter : GoogleMapBP(), GoogleMapP {
     private val aircraftDataPublishSubject: PublishSubject<AircraftData> = PublishSubject.create()
 
     private val fetchTimer: Timer = Timer()
-    private val FETCH_DELAY: Long = 1000
+    private val FETCH_DELAY: Long = 100000
 
     init {
         MainApp.appComponent.inject(this)
@@ -55,6 +57,7 @@ class GoogleMapPresenter : GoogleMapBP(), GoogleMapP {
                 //googleMap!!.setMapStyle(MapStyleOptions.loadRawResourceStyle(mView?.getContext()!!,R.raw.map_style))
                 mView?.onMapViewReady(googleMap!!)
                 //start()
+                setCameraPosition(LatLng(47.457612, 8.557476))
                 startFetchingAircraftData()
             }
         }
@@ -80,7 +83,7 @@ class GoogleMapPresenter : GoogleMapBP(), GoogleMapP {
             }
         }, 0, FETCH_DELAY)
         mView?.startClearingLoop()
-        mView?.startDroneMovement()
+        // mView?.startDroneMovement()
     }
 
     override fun getAircraftDataPublisher(): PublishSubject<AircraftData> {
@@ -95,9 +98,10 @@ class GoogleMapPresenter : GoogleMapBP(), GoogleMapP {
         googleMap!!.setOnMarkerDragListener(onMarkerDragListener)
     }
 
-    override fun moveDrone(marker: Marker, deltaLat: Double, deltaLong: Double) {
-        marker.position = LatLng(marker.position.latitude + deltaLat, marker.position.longitude + deltaLong)
-        mApi.postDronePosition(AircraftData.setDrone(marker.position, "F2137", mView?.getSimpleDateFormat()!!))
+    override fun moveDrone(drone: Drone, deltaLat: Double, deltaLong: Double, alt: Int) {
+        drone.marker.position = LatLng(drone.marker.position.latitude + deltaLat, drone.marker.position.longitude + deltaLong)
+        drone.marker.snippet = "Height: $alt"
+        mApi.postDronePosition(AircraftData.setDrone(drone.marker.position, drone.name, mView?.getSimpleDateFormat()!!, alt))
                 .subscribeOn(Schedulers.io())
                 .observeOn(Schedulers.io())
                 .subscribe({
@@ -152,7 +156,7 @@ class GoogleMapPresenter : GoogleMapBP(), GoogleMapP {
 
         client?.dispatcher()?.executorService()?.shutdown()
         mView?.startClearingLoop()
-        mView?.startDroneMovement()
+        //mView?.startDroneMovement()
     }
 
     inner class AircraftWebSocketListener : WebSocketListener() {

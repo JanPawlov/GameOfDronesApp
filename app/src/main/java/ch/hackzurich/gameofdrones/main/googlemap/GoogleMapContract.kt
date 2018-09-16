@@ -3,9 +3,10 @@ package ch.hackzurich.gameofdrones.main.googlemap
 import android.content.Context
 import android.graphics.Bitmap
 import android.os.Bundle
-import ch.hackzurich.gameofdrones.AircraftData
-import ch.hackzurich.gameofdrones.AircraftMarkerPosition
+import ch.hackzurich.gameofdrones.model.AircraftData
+import ch.hackzurich.gameofdrones.model.AircraftMarkerPosition
 import ch.hackzurich.gameofdrones.MainApp
+import ch.hackzurich.gameofdrones.model.Drone
 import com.google.android.gms.maps.GoogleMap
 import com.google.android.gms.maps.MapView
 import com.google.android.gms.maps.model.*
@@ -35,7 +36,7 @@ interface GoogleMapContract {
         fun setCameraListener(listener: GoogleMap.OnCameraMoveListener?)
         fun setOnMarkerDragListener(onMarkerDragListener: GoogleMap.OnMarkerDragListener)
         fun clear()
-        fun moveDrone(marker: Marker, deltaLat: Double, deltaLong: Double)
+        fun moveDrone(drone: Drone, deltaLat: Double, deltaLong: Double, alt: Int)
         fun start()
         fun setRangeCircle(circleOptions: CircleOptions): Circle
         fun drawRoute(latLngs: ArrayList<LatLng>, colorRid: Int, width: Float = 8f, context: Context = MainApp.instance): Polyline
