@@ -34,7 +34,7 @@ class GoogleMapPresenter : GoogleMapBP(), GoogleMapP {
     private val aircraftDataPublishSubject: PublishSubject<AircraftData> = PublishSubject.create()
 
     private val fetchTimer: Timer = Timer()
-    private val FETCH_DELAY: Long = 100000
+    private val FETCH_DELAY: Long = 1000
 
     init {
         MainApp.appComponent.inject(this)
