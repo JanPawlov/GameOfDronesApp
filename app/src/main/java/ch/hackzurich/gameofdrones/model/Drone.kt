@@ -1,6 +1,5 @@
 package ch.hackzurich.gameofdrones.model
 
-import android.location.Location
 import android.util.Log
 import ch.hackzurich.gameofdrones.main.googlemap.GoogleMapFragment
 import com.google.android.gms.maps.model.LatLng
@@ -41,9 +40,9 @@ data class Drone(val name: String,
     @Volatile
     var arbitraged = false
 
-    var arbitragedHeight = 10000
+    var arbitragedHeight = 400
 
-    val distanceThreshold = 80 //minumum distance after which drones must adjust their height
+    val distanceThreshold = 80 //minimum distance after which drones must adjust their height
 
     var firstTime = true
 
@@ -84,7 +83,7 @@ data class Drone(val name: String,
                     } else { //no collision course
                         Log.e("Drone", "Drone ${this@Drone.name} returning to normal height")
                         arbitraged = false
-                        arbitragedHeight = 10000
+                        arbitragedHeight = 400
                         communicator.collisionCourseEnded()
                     }
                 }

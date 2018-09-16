@@ -98,7 +98,7 @@ class GoogleMapFragment : GoogleMapBF(), GoogleMapV {
     val droneEndLocation = LatLng(47.465436, 8.596335)
 
     val droneSpeed = (50 / 3) //m/s
-    val droneMovementTime = 294
+    val droneMovementTime = 400
     val dronePositionRefresh = 2
 
     val latDelta = (droneEndLocation.latitude - droneStartLocation.latitude) / droneMovementTime
@@ -134,7 +134,7 @@ class GoogleMapFragment : GoogleMapBF(), GoogleMapV {
                 }
                 droneCounter += dronePositionRefresh
             }
-        }, 0, 2000)
+        }, 0, 1000/15)
 
     }
 
@@ -187,24 +187,6 @@ class GoogleMapFragment : GoogleMapBF(), GoogleMapV {
     val startLocations = arrayListOf(firstDroneStartLocation, secondDroneStartLocation, thirdDroneStartLocation)
     val endLocations = arrayListOf(firstDroneEndLocation, secondDroneEndLocation, thirdDroneEndLocation)
 
-    val travelTime = 50
-    val travelInterval: Long = 1000
-
-    val firstDroneDeltaLat = firstDroneStartLocation.latitude - firstDroneEndLocation.latitude
-    val firstDroneLatIteration = firstDroneDeltaLat / travelTime
-    val firstDroneDeltaLng = firstDroneStartLocation.longitude - firstDroneEndLocation.longitude
-    val firstDroneLngIteration = firstDroneDeltaLng / travelTime
-
-    val secondDroneDeltaLat = secondDroneStartLocation.latitude - secondDroneEndLocation.latitude
-    val secondDroneLatIteration = secondDroneDeltaLat / travelTime
-    val secondDroneDeltaLng = secondDroneStartLocation.longitude - secondDroneEndLocation.longitude
-    val secondDroneLngIteration = secondDroneDeltaLng / travelTime
-
-    val thirdDroneDeltaLat = thirdDroneStartLocation.latitude - thirdDroneEndLocation.latitude
-    val thirdDroneLatIteration = thirdDroneDeltaLat / travelTime
-    val thirdDroneDeltaLng = thirdDroneStartLocation.longitude - thirdDroneEndLocation.longitude
-    val thirdDroneLngIteration = thirdDroneDeltaLng / travelTime
-
     val communicator = Communicator()
     lateinit var mDroneController: DroneController
 
@@ -226,9 +208,8 @@ class GoogleMapFragment : GoogleMapBF(), GoogleMapV {
         val iterator = droneNetwork.iterator()
         while (iterator.hasNext())
             iterator.next().attachDroneNetwork(droneNetwork)
-        mDroneController = DroneController(droneNetwork, communicator)
+        mDroneController = DroneController(droneNetwork)
         mDroneController.startDrones()
-
     }
 
     inner class Communicator : DroneCommunicator {
@@ -272,27 +253,23 @@ class GoogleMapFragment : GoogleMapBF(), GoogleMapV {
         override fun adjustHeight(): Int {
             return if (!firstAcommodated) {
                 firstAcommodated = true
-                10000
+                400
             } else if (!secondAcommodated) {
                 secondAcommodated = true
-                8000
+                395
             } else {
                 thirdAcommodated = true
-                12000
+                405
             }
         }
     }
 
-    inner class DroneController(private val drones: ArrayList<Drone>, droneCommunicator: DroneCommunicator) {
+    inner class DroneController(private val drones: ArrayList<Drone>) {
 
         fun startDrones() {
             for (drone in drones)
                 google_map_view.post {
                     drone.startDrone()
-                    try {
-                        Thread.sleep(100)
-                    } catch (e: InterruptedException) {
-                    }
                 }
         }
     }
@@ -324,14 +301,6 @@ class GoogleMapFragment : GoogleMapBF(), GoogleMapV {
 
     fun getLastGpsPosition(): LatLng? {
         return mPresenter.getLastGpsPosition()
-    }
-
-    fun setRangeCircle(circleOptions: CircleOptions): Circle {
-        return mPresenter.setRangeCircle(circleOptions)
-    }
-
-    fun setCameraListener(listener: GoogleMap.OnCameraMoveListener?) {
-        mPresenter.setCameraListener(listener)
     }
 
     override fun onResume() {
