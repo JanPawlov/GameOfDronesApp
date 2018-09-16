@@ -44,7 +44,7 @@ data class Drone(val name: String,
     var arbitragedHeight = 10000
 
 
-    val distanceThreshold = 100 //minumum distance after which drones must adjust their height
+    val distanceThreshold = 80 //minumum distance after which drones must adjust their height
 
     var firstTime = true
 
